@@ -1,20 +1,12 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/backend/api/index" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    },
-    {
-      "src": "backend/api/index.js",
-      "use": "@vercel/node"
+    "experimentalServices": {
+        "frontend": {
+            "routePrefix": "/",
+            "framework": "vite"
+        },
+        "backend": {
+            "root": "backend",
+            "routePrefix": "/_/backend"
+        }
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
 }
