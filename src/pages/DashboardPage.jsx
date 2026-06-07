@@ -1,4 +1,4 @@
-import { useDashboard } from '@/hooks/useExpenses'
+import { useDashboard, useExpenses } from '@/hooks/useExpenses'
 import StatCard from '@/components/ui/StatCard'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import { getCategoryMeta } from '@/utils/constants'
@@ -8,7 +8,6 @@ import {
   AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
-import { useExpenses } from '@/hooks/useExpenses'
 import { PageLoader } from '@/components/ui/LoadingSpinner'
 
 const COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#6366f1', '#0ea5e9', '#6b7280']
@@ -27,7 +26,7 @@ function RecentTable({ expenses, loading }) {
         </thead>
         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
           {expenses.slice(0, 8).map(e => (
-            <tr key={e._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+            <tr key={e.id || e._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
               <td className="py-2.5 px-3 font-medium text-gray-900 dark:text-white">{e.title}</td>
               <td className="py-2.5 px-3"><CategoryBadge category={e.category} /></td>
               <td className="py-2.5 px-3 text-gray-500 dark:text-gray-400">{formatDate(e.date)}</td>
@@ -45,11 +44,18 @@ function RecentTable({ expenses, loading }) {
 
 export default function DashboardPage() {
   const { summary, trend, loading: dashLoading } = useDashboard()
-  const { expenses, loading: expLoading } = useExpenses({ limit: 100, page: 1 })
+  const { expenses, loading: expLoading } = useExpenses({ limit: 10, page: 1 })
 
-  const pieData = (summary?.byCategory || []).map(c => ({
+  // Support both real API field names and mock field names
+  const totalExpenses = summary?.totalExpenses ?? summary?.totalAll ?? 0
+  const totalCount    = summary?.totalCount    ?? summary?.count    ?? 0
+  const monthExpenses = summary?.currentMonthExpenses ?? summary?.totalMonth    ?? 0
+  const monthCount    = summary?.currentMonthCount    ?? summary?.monthCount    ?? 0
+  const categories    = summary?.categoryWiseExpenses ?? summary?.byCategory    ?? []
+
+  const pieData = categories.map(c => ({
     name: getCategoryMeta(c.category).label,
-    value: parseFloat(c.total.toFixed(2)),
+    value: parseFloat(Number(c.total).toFixed(2)),
   }))
 
   return (
@@ -58,23 +64,23 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           title="Total Expenses"
-          value={formatCurrency(summary?.totalAll || 0)}
-          subtitle={`${summary?.count || 0} transactions`}
+          value={formatCurrency(totalExpenses)}
+          subtitle={`${totalCount} transactions`}
           icon={DollarSign}
           color="primary"
           loading={dashLoading}
         />
         <StatCard
           title="This Month"
-          value={formatCurrency(summary?.totalMonth || 0)}
-          subtitle={`${summary?.monthCount || 0} transactions`}
+          value={formatCurrency(monthExpenses)}
+          subtitle={`${monthCount} transactions`}
           icon={Calendar}
           color="green"
           loading={dashLoading}
         />
         <StatCard
           title="Avg per Transaction"
-          value={formatCurrency(summary?.count ? (summary.totalAll / summary.count) : 0)}
+          value={formatCurrency(totalCount ? totalExpenses / totalCount : 0)}
           subtitle="All time average"
           icon={TrendingUp}
           color="amber"
@@ -82,8 +88,8 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Top Category"
-          value={summary?.byCategory?.[0] ? getCategoryMeta(summary.byCategory[0].category).label : '—'}
-          subtitle={summary?.byCategory?.[0] ? formatCurrency(summary.byCategory[0].total) : ''}
+          value={categories[0] ? getCategoryMeta(categories[0].category).label : '—'}
+          subtitle={categories[0] ? formatCurrency(categories[0].total) : ''}
           icon={ShoppingCart}
           color="violet"
           loading={dashLoading}
@@ -104,12 +110,12 @@ export default function DashboardPage() {
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} />
                 <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} tickFormatter={v => `$${v}`} />
                 <Tooltip
                   formatter={(v) => [formatCurrency(v), 'Total']}
-                  contentStyle={{ background: 'var(--tooltip-bg, #fff)', border: '1px solid #e5e7eb', borderRadius: 8 }}
+                  contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8 }}
                 />
                 <Area type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTotal)" />
               </AreaChart>
@@ -137,19 +143,20 @@ export default function DashboardPage() {
       </div>
 
       {/* Category breakdown */}
-      {!dashLoading && summary?.byCategory?.length > 0 && (
+      {!dashLoading && categories.length > 0 && (
         <div className="card p-5">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Category Breakdown</h3>
           <div className="space-y-3">
-            {summary.byCategory.sort((a, b) => b.total - a.total).map((c, i) => {
-              const pct = ((c.total / summary.totalAll) * 100).toFixed(1)
+            {[...categories].sort((a, b) => b.total - a.total).map((c, i) => {
+              const pct = totalExpenses > 0 ? ((c.total / totalExpenses) * 100).toFixed(1) : '0.0'
               const meta = getCategoryMeta(c.category)
               return (
                 <div key={c.category}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{meta.label}</span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {formatCurrency(c.total)} <span className="text-xs text-gray-400 font-normal">({pct}%)</span>
+                      {formatCurrency(c.total)}{' '}
+                      <span className="text-xs text-gray-400 font-normal">({pct}%)</span>
                     </span>
                   </div>
                   <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">

@@ -46,12 +46,21 @@ export function generateSummary(expenses) {
     const d = new Date(e.date)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   })
-  const totalAll = expenses.reduce((s, e) => s + e.amount, 0)
-  const totalMonth = thisMonth.reduce((s, e) => s + e.amount, 0)
-  const byCategory = categories.map(cat => ({
+  const totalExpenses = parseFloat(expenses.reduce((s, e) => s + e.amount, 0).toFixed(2))
+  const currentMonthExpenses = parseFloat(thisMonth.reduce((s, e) => s + e.amount, 0).toFixed(2))
+  const categoryWiseExpenses = categories.map(cat => ({
     category: cat,
-    total: expenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0),
-  })).filter(c => c.total > 0)
+    total: parseFloat(expenses.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0).toFixed(2)),
+    count: expenses.filter(e => e.category === cat).length,
+  })).filter(c => c.total > 0).sort((a, b) => b.total - a.total)
 
-  return { totalAll, totalMonth, byCategory, count: expenses.length, monthCount: thisMonth.length }
+  return {
+    totalExpenses,
+    totalCount: expenses.length,
+    currentMonthExpenses,
+    currentMonthCount: thisMonth.length,
+    categoryWiseExpenses,
+    recentTransactions: expenses.slice(0, 10),
+    monthlyTrend: [],
+  }
 }

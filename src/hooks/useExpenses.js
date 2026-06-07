@@ -13,8 +13,10 @@ export function useExpenses(params = {}) {
       setLoading(true)
       setError(null)
       const data = await expenseService.getAll(params)
-      setExpenses(data.expenses || data)
-      setTotal(data.total || (data.expenses || data).length)
+      // real API returns { expenses, total }, mock returns same shape
+      const list = Array.isArray(data) ? data : (data.expenses || [])
+      setExpenses(list)
+      setTotal(typeof data.total === 'number' ? data.total : list.length)
     } catch (err) {
       setError(err.message)
     } finally {

@@ -36,9 +36,14 @@ export default function ExpensesPage() {
   const [deleting, setDeleting] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
-  const { expenses, total, loading, remove } = useExpenses({
-    page, limit: ITEMS_PER_PAGE, search, category, startDate, endDate, sortBy, sortDir,
-  })
+  // Strip empty strings so the backend doesn't receive blank query params
+  const queryParams = { page, limit: ITEMS_PER_PAGE, sortBy, sortDir }
+  if (search)    queryParams.search    = search
+  if (category)  queryParams.category  = category
+  if (startDate) queryParams.startDate = startDate
+  if (endDate)   queryParams.endDate   = endDate
+
+  const { expenses, total, loading, remove } = useExpenses(queryParams)
 
   const handleSearch = (e) => {
     e.preventDefault()

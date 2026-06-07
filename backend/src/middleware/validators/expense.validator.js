@@ -5,6 +5,9 @@ const VALID_CATEGORIES = [
   'health', 'utilities', 'education', 'other',
 ]
 
+// Treat '', null, undefined, 0, false all as absent (skip validation)
+const FALSY = { values: 'falsy' }
+
 const expenseBodyValidator = [
   body('title')
     .trim()
@@ -26,34 +29,34 @@ const expenseBodyValidator = [
     .isISO8601().withMessage('Date must be a valid ISO 8601 date')
     .toDate(),
   body('notes')
-    .optional({ nullable: true })
+    .optional(FALSY)
     .trim()
     .isLength({ max: 500 }).withMessage('Notes must be at most 500 characters'),
 ]
 
 const expenseQueryValidator = [
   query('page')
-    .optional()
+    .optional(FALSY)
     .isInt({ min: 1 }).withMessage('Page must be a positive integer')
     .toInt(),
   query('limit')
-    .optional()
+    .optional(FALSY)
     .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
     .toInt(),
   query('category')
-    .optional()
-    .isIn([...VALID_CATEGORIES, '']).withMessage('Invalid category'),
+    .optional(FALSY)
+    .isIn(VALID_CATEGORIES).withMessage('Invalid category'),
   query('startDate')
-    .optional()
+    .optional(FALSY)
     .isISO8601().withMessage('startDate must be a valid ISO 8601 date'),
   query('endDate')
-    .optional()
+    .optional(FALSY)
     .isISO8601().withMessage('endDate must be a valid ISO 8601 date'),
   query('sortBy')
-    .optional()
+    .optional(FALSY)
     .isIn(['date', 'amount', 'title', 'createdAt']).withMessage('Invalid sortBy field'),
   query('sortDir')
-    .optional()
+    .optional(FALSY)
     .isIn(['asc', 'desc']).withMessage('sortDir must be asc or desc'),
 ]
 
